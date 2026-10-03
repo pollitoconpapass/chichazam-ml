@@ -3,3 +3,7 @@
 **/__pycache__
 **/dataset_peru_shazam
 .DS_Store
+*.db
+*.db-shm
+*.db-wal
+*.ipynb_checkpoints
