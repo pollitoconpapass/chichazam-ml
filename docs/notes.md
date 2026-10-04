@@ -22,8 +22,8 @@ Aquí estarán algunas notas relacionadas a los dos módulos del proyecto. Más 
 1. Se hace el proceso de fingerprinting de la grabación de audio (fragmento de una canción a detectar).
 2. Para cada hash de la grabacion se busca en la DB todas las filas con ese hash y arrojas todos los resultados posibles. ("Esta canción tiene este hash en el tiempo X")
 3. Por cada resultado, se calcula la diferencia: `= tiempo_en_canción − tiempo_en_grabación`
-4. Por canción, se cuenta cuantas mismas diferencias hay
-5. El score de cada canción es esta misma cantidad, aquella que tenga mayor cantidad es la ganadora.
+4. Por canción, se cuenta cuantas mismas diferencias hay (un histograma de cantidades que cuenta cuantas veces aparece esa diferencia)
+5. El score de cada canción es la cantidad mas alta de veces que aparece una diferencia (barra mas alta del histograma)
 
 Ej:
 
