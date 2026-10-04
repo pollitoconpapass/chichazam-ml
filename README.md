@@ -7,7 +7,7 @@ Aquí estará todo el código relacionado al proyecto.
 El objetivo principal del proyecto es desarrollar un sistema de identificación musical, similar a Shazam, enfocado en la música peruana. Esto implica:
 
 1.  **Identificación de Canciones `(Audio Fingerprinting)`:** Reconocer canciones específicas a partir de fragmentos de audio en streaming cuando estas ya se encuentran en nuestra base de datos.
-2.  **Clasificación de Género y Recomendación:** Para las canciones que no estén en nuestra base de datos, el sistema deberá ser capaz de recomendar canciones similares utilizando técnicas de audio embeddings.
+2.  **Recomendación de Canciones:** Para las canciones que no estén en nuestra base de datos, el sistema deberá ser capaz de recomendar canciones similares utilizando técnicas de audio embeddings.
 
 ## Referencias Bibliográficas (Papers)
 
