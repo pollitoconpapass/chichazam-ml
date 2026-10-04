@@ -51,7 +51,7 @@ with fast_ingest(conn):
         try:
             # NUCLEO DE TODO TODO TODITO
             h = hashes(peaks(generate_spectrogram(str(audio_path)))) # -> generacion de hashes
-            song_id = store_song(conn, name, h) # -> guardar en la bd
+            song_id = store_song(conn, name, h, source_url=cancion["source_url"]) # -> guardar en la bd
         except Exception as exc:
             fallidas += 1
             print(f"[{i}/{len(canciones)}] {name}: error al procesar ({exc})")

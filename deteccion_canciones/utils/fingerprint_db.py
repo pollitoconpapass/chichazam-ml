@@ -50,14 +50,14 @@ def delete_song(conn: sqlite3.Connection, name: str) -> None:
         conn.execute("DELETE FROM songs WHERE name = ?", (name,))
 
 def store_song(conn: sqlite3.Connection, name: str, hashes: list[tuple[int, int]],
-               replace: bool = False) -> int | None:
+               replace: bool = False, source_url: str | None = None) -> int | None:
     if song_exists(conn, name):
         if not replace:
             return None
         delete_song(conn, name)
  
     with conn:  # una sola transacción: o se guarda todo o nada
-        cur = conn.execute("INSERT INTO songs(name) VALUES (?)", (name,))
+        cur = conn.execute("INSERT INTO songs(name, source_url) VALUES (?, ?)", (name, source_url))
         song_id = cur.lastrowid
         conn.executemany(
             # OR IGNORE: el mismo (hash, song, tiempo) puede repetirse y la PK lo rechazaría
