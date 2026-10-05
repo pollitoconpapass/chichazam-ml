@@ -3,7 +3,6 @@ import sys
 import tempfile
 import streamlit as st
 from pathlib import Path
-from streamlit_mic_recorder import mic_recorder
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PROJECT_ROOT / "fingerprints.db"
@@ -23,42 +22,44 @@ def detectar_cancion(audio_file_path: str)-> list:
     resultados = identify(conn, hashes_query, top_k=5, min_score=5, max_hash_freq=2000)
     return resultados
 
+@st.cache_data(show_spinner=False, max_entries=20)
+def analizar(wav_bytes: bytes) -> list:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(wav_bytes)
+        ruta = tmp.name
+    try:
+        return detectar_cancion(ruta) or []
+    finally:
+        try:
+            os.unlink(ruta)
+        except OSError:
+            pass
+
 
 # UI de Streamlit
 st.set_page_config(page_title="Shazam Peru", page_icon="🇵🇪", layout="centered")
 st.title("Shazam para musica peruana 🇵🇪")
-st.caption("Ghazam para música peruana: graba o sube un fragmento y te decimos qué canción es..")
+st.caption("Shazam para música peruana: graba o sube un fragmento y te decimos qué canción es..")
 
-audio = mic_recorder(
-    start_prompt="Empezar a grabar",
-    stop_prompt="⏹ Detener grabación",
-    just_once=False,
-    key="recorder",
-)
+audio = st.audio_input("Graba unos 10 segundos de la canción", sample_rate=SR)
 
-if audio and audio.get("bytes"):
-    wav_bytes = audio["bytes"]
+if audio is not None:
+    wav_bytes = audio.getvalue()
 
-    # Reproducir el audio grabado para verificar
+    # Reproducir el audio grabado para verificar (y en caso el usuario quiera descargarlo...)
     st.audio(wav_bytes, format="audio/wav")
 
-    # Guardar temporalmente como .wav y pasar la ruta a detectar_cancion
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(wav_bytes)
-        ruta_wav = tmp.name
+    # # Guardar temporalmente como .wav y pasar la ruta a detectar_cancion
+    # with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+    #     tmp.write(wav_bytes)
+    #     ruta_wav = tmp.name
 
     try:
         with st.spinner("Analizando el audio..."):
-            resultados = detectar_cancion(ruta_wav) or []
+            resultados = analizar(wav_bytes)
     except Exception as e:
         st.error(f"Ocurrió un error al analizar el audio: {e}")
         resultados = []
-    finally:
-        # Limpiar el archivo temporal
-        try:
-            os.unlink(ruta_wav)
-        except OSError:
-            pass
 
     if not resultados:
         st.warning("No se encontraron coincidencias. Intenta grabar un fragmento más largo o con menos ruido.")
