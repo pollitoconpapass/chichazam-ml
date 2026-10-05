@@ -93,9 +93,9 @@ def find_matches(conn: sqlite3.Connection, query_hashes: list[tuple[int, int]],
     else:
         sql = """
             WITH common AS (
-                SELECT f.hash FROM fingerprints f
-                JOIN (SELECT DISTINCT hash FROM query_hashes) qd ON qd.hash = f.hash
-                GROUP BY f.hash HAVING COUNT(*) > ?
+                -- hash con mas de N filas <=> existe una fila en el offset N (corta ahi en vez de contarlas todas)
+                SELECT qd.hash FROM (SELECT DISTINCT hash FROM query_hashes) qd
+                WHERE EXISTS (SELECT 1 FROM fingerprints f WHERE f.hash = qd.hash LIMIT 1 OFFSET ?)
             )
             SELECT f.song_id, f.anchor_time - q.t AS delta, COUNT(*) AS votes
             FROM query_hashes q
