@@ -7,3 +7,4 @@
 *.db-shm
 *.db-wal
 *.ipynb_checkpoints
+recomendacion_canciones/embedding_mean.npy

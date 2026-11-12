@@ -1,0 +1,13 @@
+datasets
+fastapi
+huggingface_hub
+librosa
+matplotlib
+numpy
+pinecone
+python-dotenv
+requests
+streamlit
+torch
+transformers
+yt-dlp
