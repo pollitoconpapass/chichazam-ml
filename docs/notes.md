@@ -51,8 +51,35 @@ Fourier (clásico) toma un trozo de sonido y te dice qué frecuencias (notas) co
 
 ## Recomendación de canciones
 
-1. Crear embeddings de cada una de las canciones en el dataset
-2. Subirlas a Pinecone con su metadata (titulo, genero, url)
-3. Cuando el usuario reproduzca un fragmento de canción, hacer el embedding de ese audio
-4. Consultar topk = 4 de similitudes de ese vector con los vectores de la base de datos
-5. Mostrar los matches con su metadata
+### Ingesta
+
+1. Descargar el dataset de Hugging Face (`pollitoconpapass/dataset-peru-shazam`) y quedarse con las canciones válidas del `catalog.json`.
+2. Cargar cada audio a 24 kHz mono (MERT trabaja a esa frecuencia) y cortarlo en ventanas de 10 s con 50 % de solapamiento (salto de 5 s). El resto final menor a 5 s se descarta.
+3. Vectorizar cada ventana con MERT (`m-a-p/MERT-v1-95M`, 768 dims): promedio de las últimas 4 capas y del tiempo, y normalizar el vector en L2.
+4. Restar el vector medio de todo el corpus y renormalizar. Sin este centrado las similitudes quedan comprimidas entre 0.94 y 0.99 y el ranking es casi ruido. La media se guarda en `embedding_mean.npy` y se aplica igual al vectorizar la consulta.
+5. Subir los vectores a Pinecone con metadata: `chunk_id`, `song_id`, `title`, `genre`, `source_url`, `start_sec`, `duration_seconds`. El ID es determinístico (`song_id|start_sec`), así que re-ejecutar la ingesta sobrescribe en vez de duplicar.
+
+Se usa un namespace por configuración (`mert-10s-5s`): si cambia el modelo o el tamaño de ventana, se cambia el namespace para no mezclar versiones.
+
+> Se empezó con CLAP (`laion/larger_clap_music`), pero en una muestra de 600 chunks separaba muy poco estos géneros: un clasificador lineal sobre sus embeddings daba 43 % de accuracy y Precision@5 de 0.33. Con MERT las mismas métricas suben a 82 % y 0.66. La música peruana necesita un encoder musical, no uno audio-texto.
+
+
+### Consulta
+
+1. Cargar el clip a 24 kHz y cortarlo igual que en la ingesta (si dura menos de 10 s, se usa completo).
+2. Vectorizar el clip con el mismo modelo, normalizar, centrar con la misma media y renormalizar.
+3. Identificar la canción exacta con el módulo de fingerprints, **no** con MERT: el embedding mide similitud, no identidad. Si el fingerprint la encuentra (`score >= 20`), se conoce su género y se excluye de las recomendaciones.
+4. Consultar Pinecone pidiendo 300 chunks (`metric="cosine"`). Si se conoce el género, se filtra por él; si el clip no está en la base de fingerprints, se recomienda solo por similitud de contenido.
+5. Agrupar los chunks por canción y quedarse con la similitud máxima de cada una. Esto evita que el top-k sean 5 fragmentos de la misma canción.
+
+Ejemplo real: un clip de "La Universidad" (rock, con ruido de micrófono) daba como más parecido a "La Comadre Cocoliche" (criolla) usando solo el embedding. El fingerprint sí la identifica con score 379, así que ahora se excluye esa canción y se recomienda dentro de rock.
+
+### Evaluación
+
+`main_evaluar.py` muestrea chunks del índice, los consulta contra Pinecone y reporta:
+
+- **Identidad top-1:** excluyendo el chunk consultado (no la canción), ¿el chunk más parecido pertenece a la misma canción? Verifica que el embedding generalice dentro de una canción.
+- **Score de la misma canción:** percentiles p5/p50; sirve como referencia de cuánto se parece un fragmento distinto de la misma canción.
+- **Precision@5 por género:** excluyendo la canción consultada, ¿cuántas de las 5 recomendaciones comparten su género? Mide el caso "clip fuera de la base de fingerprints", donde no hay filtro por género. Se compara contra el baseline aleatorio (la frecuencia del género en el índice).
+
+El género es un proxy de similitud, no de gusto: el dataset no tiene feedback de usuarios.
