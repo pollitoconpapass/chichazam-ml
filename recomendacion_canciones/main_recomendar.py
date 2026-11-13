@@ -28,7 +28,7 @@ def detectar_cancion(audio_path: str) -> str | None: # -> funcion de deteccion c
         conn.close()
 
 
-def recomendar(audio_path: str, top_k: int = 5) -> list[dict]:
+def recomendar(audio_path: str, top_k: int = 5, cancion_detectada: str | None = None) -> list[dict]:
     if not MEAN_PATH.exists():
         raise SystemExit("Falta embedding_mean.npy; corre main_ingest.py primero.")
     index = get_index()
@@ -37,7 +37,7 @@ def recomendar(audio_path: str, top_k: int = 5) -> list[dict]:
 
     # Si el clip esta en la base de fingerprints se conoce la cancion exacta:
     # se excluye y se recomienda dentro de su genero.
-    detectada = detectar_cancion(audio_path)
+    detectada = cancion_detectada or detectar_cancion(audio_path) # -> solo para el UI, ya que ahi ya se hace la deteccion de la cancion en otra funcion
     excluir, genero = [], None
     if detectada:
         md = find_song(index, vectores[0], detectada)

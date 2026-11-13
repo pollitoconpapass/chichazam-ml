@@ -12,6 +12,7 @@ from deteccion_canciones.utils.hashing import hashes
 from deteccion_canciones.utils.patterns import peaks
 from deteccion_canciones.utils.spectrogram import generate_spectrogram
 from deteccion_canciones.utils.fingerprint_db import get_connection, identify
+from recomendacion_canciones.main_recomendar import MIN_SCORE_FINGERPRINT, recomendar
 
 # Configuracion inicial para deteccion de canciones
 SR, HOP = 11025, 512
@@ -22,18 +23,27 @@ def detectar_cancion(audio_file_path: str)-> list:
     resultados = identify(conn, hashes_query, top_k=5, min_score=5, max_hash_freq=2000)
     return resultados
 
-@st.cache_data(show_spinner=False, max_entries=20)
-def analizar(wav_bytes: bytes) -> list:
+def _con_archivo_temp(wav_bytes: bytes, fn) -> list:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(wav_bytes)
         ruta = tmp.name
     try:
-        return detectar_cancion(ruta) or []
+        return fn(ruta) or []
     finally:
         try:
             os.unlink(ruta)
         except OSError:
             pass
+
+
+@st.cache_data(show_spinner=False, max_entries=20)
+def analizar(wav_bytes: bytes) -> list:
+    return _con_archivo_temp(wav_bytes, detectar_cancion)
+
+
+@st.cache_data(show_spinner=False, max_entries=20)
+def recomendar_canciones(wav_bytes: bytes, detectada: str | None) -> list:
+    return _con_archivo_temp(wav_bytes, lambda ruta: recomendar(ruta, cancion_detectada=detectada))
 
 
 # UI de Streamlit
@@ -79,3 +89,25 @@ if audio is not None:
                 for r in resultados[1:]:
                     nombre = f"[{r['name']}]({r['source_url']})" if r["source_url"] else r["name"]
                     st.markdown(f"- {nombre} (score {r['score']})")
+
+    # Reutilizar la deteccion hecha anteriormente
+    detectada = resultados[0]["name"] if resultados and resultados[0]["score"] >= MIN_SCORE_FINGERPRINT else None
+
+    # Recomendaciones por similitud de audio (MERT + Pinecone)
+    with st.spinner("Buscando canciones parecidas..."):
+        try:
+            recomendaciones = recomendar_canciones(wav_bytes, detectada)
+        except Exception as e:
+            st.warning(f"No se pudieron generar recomendaciones: {e}")
+            recomendaciones = []
+
+    if recomendaciones:
+        st.subheader("Canciones que podrían gustarte")
+        etiquetas = [f"{r['name']} · {r['genre']}" for r in recomendaciones]
+        elegida = st.pills("Canciones parecidas", etiquetas, default=etiquetas[0], label_visibility="collapsed")
+        r = recomendaciones[etiquetas.index(elegida)] if elegida else None
+        if r and r["source_url"]:
+            st.video(r["source_url"])
+            st.caption(f"[Ver en YouTube]({r['source_url']})")
+        elif r:
+            st.write(r["name"])
