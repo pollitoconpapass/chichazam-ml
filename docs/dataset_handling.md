@@ -1,6 +1,19 @@
 # HOW TO: Manejo del dataset de Hugging Face
 
-El dataset donde se encuentran todas las canciones junto con su metadata se llama: `pollitoconpapass/dataset-peru-shazam`. Son un total de 318 canciones.
+El dataset de HuggingFace donde se encuentran todas las canciones junto con su metadata se llama: [pollitoconpapass/dataset-peru-shazam](https://huggingface.co/datasets/pollitoconpapass/dataset-peru-shazam).
+
+## Contenido
+
+Son un total de 500 canciones, repartidas en los siguientes generos
+| Genero | Cantidad |
+|-------|------|
+| `chicha` | 100 |
+| `criolla` | 100 |
+| `cumbia_amazonica` | 100 |
+| `huayno` | 100 |
+| `rock` | 100 |
+
+Hay 100 por cada género, para saber como se creo el dataset, revisar el modulo de `recoleccion_datos` (el archivo `scripts/add_song_to_db.py` también está relacionado)
 
 ## Estructura
 
