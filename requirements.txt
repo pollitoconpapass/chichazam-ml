@@ -1,6 +1,7 @@
 datasets
 fastapi
 huggingface_hub
+joblib
 librosa
 matplotlib
 numpy
